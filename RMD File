@@ -1,0 +1,152 @@
+---
+title: "ANN(ABIGAIL)"
+output: pdf_document
+date: "2024-07-31"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+
+# Installation of necessary packages and libraries
+
+install.packages(c('neuralnet','keras','tensorflow'), dependencies = T)
+library(neuralnet)
+install.packages("tidyverse")
+library(tidyverse)
+
+#loading and viewing dataset
+
+iris<-iris %>%mutate_if(is.character, as.factor)
+
+# Get the total number of rows in the dataset
+total_rows <- nrow(iris)
+total_rows
+
+# View the first 10 rows of the dataset
+head(iris, 10)
+
+summary(iris)
+
+# Train and test split
+
+set.seed(254)
+data_rows<-floor(0.80 * nrow(iris))
+data_rows
+
+
+train_indices<-sample(c(1:nrow(iris)), data_rows)
+train_indices
+
+train_data<-iris[train_indices, ]
+train_samples <- sample_n(train_data, 5)
+train_samples
+
+
+test_data<-iris[-train_indices,]
+test_samples <- sample_n(test_data, 5)
+test_samples
+
+
+# Define and train the first model with hidden layers c(6, 2)
+model1 <- neuralnet(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width,data = train_data, hidden = c(20, 2), linear.output = FALSE)
+                    
+# Define and train the second model with hidden layers c(10, 4)
+model2 <- neuralnet(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width,data = train_data, hidden = c(15, 6,4), linear.output = FALSE)
+                    
+# Define and train the third model with hidden layers c(50,10)
+model3 <- neuralnet(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width,data = train_data, hidden = c(50,10), linear.output = FALSE)
+
+# Plot the models
+plot(model1, rep = 'best', main = "Model with hidden layers c(20, 2)")
+plot(model2, rep = 'best', main = "Model with hidden layers c(15,6, 4)")
+plot(model3, rep = 'best', main = "Model with hidden layers c(50,10) ")
+
+
+# Model evaluation
+#predict categories - test dataset
+#list of category names
+#dataframe
+# table - actual and predicated
+
+
+# Function to predict and calculate accuracy
+evaluate_model <- function(model, test_data) {
+  pred <- predict(model, test_data)
+  labels <- c("setosa", "versicolor", "virginica")
+  
+  prediction_label <- data.frame(max.col(pred)) %>%
+    mutate(pred = labels[max.col.pred.]) %>%
+    select(pred) %>%
+    unlist()
+  
+  table(test_data$Species, prediction_label)
+  
+  check <- as.numeric(test_data$Species) == max.col(pred)
+  accuracy <- (sum(check) / nrow(test_data)) * 100
+  return(accuracy)
+}
+
+
+
+# Evaluate each model
+accuracy1 <- evaluate_model(model1, test_data)
+accuracy2 <- evaluate_model(model2, test_data)
+accuracy3 <- evaluate_model(model3, test_data)
+
+# Print accuracies
+print(paste("Accuracy of model 1 (20, 2):", accuracy1))
+print(paste("Accuracy of model 2 (15,6, 4):", accuracy2))
+print(paste("Accuracy of model 3 (50,10):", accuracy3))
+
+
+
+# Install the kableExtra package
+install.packages("kableExtra")
+
+# Load necessary libraries
+library(dplyr)
+library(neuralnet)
+library(knitr)
+library(kableExtra)
+
+# Create a data frame with the accuracies
+results <- data.frame(
+  Model = c("Model 1 (20, 2)", "Model 2 (15,6, 4)", "Model 3 (50,10)"),
+  Accuracy = c(accuracy1, accuracy2, accuracy3)
+)
+# Print the table using knitr and kableExtra
+knitr::kable(results, format = "latex", booktabs = TRUE, col.names = c("Model", "Accuracy (%)")) %>%
+  kable_styling(latex_options = "hold_position", full_width = FALSE)
+
+# Install the pROC package if not already installed
+install.packages("pROC")
+
+# Load necessary library
+library(pROC)
+
+# Function to plot ROC curve and calculate AUC
+plot_roc <- function(model, test_data) {
+  pred <- predict(model, test_data)
+  roc_curve <- roc(response = as.numeric(test_data$Species), predictor = as.numeric(max.col(pred)))
+  auc_value <- auc(roc_curve)
+  
+  plot(roc_curve, main = paste("ROC Curve (AUC =", round(auc_value, 2), ")"))
+}
+
+# Plot ROC curves for each model
+par(mfrow = c(1, 3))
+plot_roc(model1, test_data)
+plot_roc(model2, test_data)
+plot_roc(model3, test_data)
+
+
+```
